@@ -1,0 +1,43 @@
+workflow:
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "master"'
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+    - if: '$CI_COMMIT_REF_NAME == "release"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    
+cache:
+  paths:
+    - vendor/
+
+stages:
+  - buildAndTest
+  - deploy
+
+docker-build-job:
+  stage: buildAndTest
+  script:
+    - echo "Build docker environment..."
+    - sudo docker stop $(docker ps -aq) || true
+    - sudo docker rm $(docker ps -aq) || true
+    - sudo docker-compose pull
+    - sudo docker-compose build
+    - sudo docker-compose up -d
+    - sleep 5
+    - echo "[Pipeline Runner] Install composer packages..."
+    - sudo docker exec php composer update
+    - sleep 5
+    - echo "[Pipeline Runner] Run migrations..."
+    - sudo docker exec php php bin/console doctrine:migrations:migrate
+    - sleep 5
+    - echo "[Pipeline Runner] Running unit tests..."
+    - sudo docker exec php php ./vendor/bin/phpunit
+    - echo "[Pipeline Runner] Build & tests completed..."
+
+deploy-job:
+  only:
+    - release
+  stage: deploy
+  script:
+    - echo "Deploying application..."
+    - curl "FORGE_DEPLOY_URL"
+    - echo "Application successfully deployed."

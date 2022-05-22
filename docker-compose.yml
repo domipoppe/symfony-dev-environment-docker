@@ -1,0 +1,47 @@
+version: '3.9'
+
+services:
+  PROJECTNAME_nginx:
+    container_name: PROJECTNAME_nginx
+    build:
+      context: .
+      dockerfile: ./.docker/nginx/Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - .:/var/www/html:cached
+    depends_on:
+      - PROJECTNAME_php
+    networks:
+      - PROJECTNAME
+
+  PROJECTNAME_db:
+    container_name: PROJECTNAME_db
+    image: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: db
+      TZ: Europe/Berlin
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./.docker/db:/var/lib/mysql
+    networks:
+      - PROJECTNAME
+
+  PROJECTNAME_php:
+    container_name: PROJECTNAME_php
+    build:
+      context: .
+      dockerfile: /.docker/php-fpm/Dockerfile
+    volumes:
+      - .:/var/www/html:cached
+    depends_on:
+      - PROJECTNAME_db
+    networks:
+      - PROJECTNAME
+
+networks:
+  PROJECTNAME:
+    name: PROJECTNAME
